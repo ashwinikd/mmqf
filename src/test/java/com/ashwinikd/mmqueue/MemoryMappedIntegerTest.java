@@ -23,8 +23,8 @@ public class MemoryMappedIntegerTest {
     private static MemoryMappedQueueImpl<MemoryMappedInteger> queue;
 
     public static void main(String[] args) {
-        testConcurrent();
-        //testSimple();
+        //testConcurrent();
+        testSimple();
     }
 
     private static  void testSleep() {
@@ -52,7 +52,7 @@ public class MemoryMappedIntegerTest {
             System.out.println(mmqf);
             MemoryMappedIntegerFactory factory = new MemoryMappedIntegerFactory();
             queue = new MemoryMappedQueueImpl<MemoryMappedInteger>(mmqf, factory);
-            ExecutorService executor = Executors.newFixedThreadPool(10);
+            ExecutorService executor = Executors.newFixedThreadPool(4);
             for (int i = 0; i < NUM_THREADS; i++) {
                 executor.submit(new QueueingTask(i));
             }
@@ -120,7 +120,8 @@ public class MemoryMappedIntegerTest {
             System.out.println("Time taken to queue: " + (end - start) + "ms");
             start = System.currentTimeMillis();
             for (int i = 0; i < N; i++) {
-                queue.dequeue();
+                int n = queue.dequeue().get();
+                //System.out.println(n);
             }
             end = System.currentTimeMillis();
             System.out.println(queue);

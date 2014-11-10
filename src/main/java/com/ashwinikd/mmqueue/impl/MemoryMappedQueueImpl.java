@@ -18,12 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements MemoryMappedQueue<T> {
     private AtomicInteger sequence;
+    private AtomicInteger dequeueSequence;
     private int head;
     private int tail;
     private int size;
     private volatile int cursor;
     private final int initialHead;
     private final int initialTail;
+    private final int initialSize;
     private final int capacity;
     private final int slotSize;
     private final MappedByteBuffer BUFFER;
@@ -56,10 +58,12 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
         tail = initialTail;
         cursor = sequence.get();
         size = readInt(SIZE_POS, SIZE_SIZ);
+        initialSize = size;
         capacity = file.getCapacity();
         slotSize = file.getSlotSize();
         elementFactory = factory;
         busyIterations = new AtomicInteger();
+        dequeueSequence = new AtomicInteger();
     }
 
     private long readLong(int pos, int siz) {
@@ -136,7 +140,7 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
             sequence.decrementAndGet();
             return false;
         }
-        int position = 32 +  ((initialTail + slotSize * (claimedSequence - 1) - 32) % (capacity*slotSize));
+        int position = 32 + ((initialTail + slotSize * (claimedSequence - 1) - 32) % (capacity*slotSize));
         byte[] bytes = e.getBytes();
         for (int i = 0; i < bytes.length; i++) {
             BUFFER.put(i + position, bytes[i]);
@@ -144,15 +148,6 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
         int expectedSequence = claimedSequence - 1;
         int i = 0;
         while(cursor != expectedSequence) {
-//            i++;
-//            if ((i % 100) == 0) {
-//                System.out.println(claimedSequence + " waiting on cursor " + cursor);
-//            }
-//            try {
-//                Thread.sleep(0, 1);
-//            } catch (InterruptedException e1) {
-//                e1.printStackTrace();
-//            }
         }
         tail = 32 + ((position + slotSize - 32) % (capacity * slotSize));
         writeLong(position + slotSize, TAIL_POS, TAIL_SIZ);
@@ -166,10 +161,12 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
 
     @Override
     public T dequeue() throws IOException, NoSuchElementException {
-        if (size == 0) {
+        int claimedSequence = dequeueSequence.incrementAndGet();
+        if ((cursor - claimedSequence + initialSize) < 0) {
+            dequeueSequence.decrementAndGet();
             throw new NoSuchElementException();
         }
-        int position = 32 + ((head - 32) % (capacity * slotSize));
+        int position = 32 + ((initialHead - 32 + (claimedSequence - 1) * slotSize) % (capacity * slotSize));
         byte[] bytes = new byte[slotSize];
         for (int i = 0; i < slotSize; i++) {
             bytes[i] = BUFFER.get(i + position);
