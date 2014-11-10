@@ -1,4 +1,4 @@
-package com.ashwinikd.ds.mmqueue.file;
+package com.ashwinikd.mmqueue.file;
 
 import java.io.File;
 import java.io.IOException;

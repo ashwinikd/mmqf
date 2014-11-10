@@ -1,4 +1,4 @@
-package com.ashwinikd.ds.mmqueue.file;
+package com.ashwinikd.mmqueue.file;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -7,7 +7,7 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
-import com.ashwinikd.ds.mmqueue.MemoryMappedQueue;
+import com.ashwinikd.mmqueue.MemoryMappedQueue;
 
 /**
  * Memory Mapped Queue File(MMQF).
@@ -260,7 +260,7 @@ public class MemoryMappedQueueFile {
         if (! overwrite && f.exists()) {
             throw new IllegalArgumentException("File " + f.getAbsolutePath() + " already exists");
         }
-        file = MemoryMappedQueueFileFormat.create(f, serialVersionUid, cap, size);
+        file = MemoryMappedQueueFileFormat.create(f, serialVersionUid, size, cap);
         version = MemoryMappedQueueFileFormat.getVersion(file);
         dataOffset = MemoryMappedQueueFileFormat.getOffsetToData(file);
         serialVersion = MemoryMappedQueueFileFormat.getSerialVersionUid(file);
@@ -303,8 +303,9 @@ public class MemoryMappedQueueFile {
         path = f.getAbsolutePath();
     }
 
-    public MappedByteBuffer getDataBuffer() throws IOException {
-        return file.getChannel().map(FileChannel.MapMode.READ_WRITE, 32, file.length() - 32);
+    public MappedByteBuffer getDataBuffer() throws IOException, MemoryMappedFileException {
+        int offset = MemoryMappedQueueFileFormat.getOffsetToData(file);
+        return file.getChannel().map(FileChannel.MapMode.READ_WRITE, offset, file.length() - offset);
     }
 
     /**

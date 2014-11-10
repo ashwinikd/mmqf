@@ -1,4 +1,6 @@
-package com.ashwinikd.ds.mmqueue;
+package com.ashwinikd.mmqueue;
+
+import java.io.Serializable;
 
 /**
  * Element which can be stored in a Memory Mapped Queue
@@ -7,12 +9,12 @@ package com.ashwinikd.ds.mmqueue;
  *
  * @since 1.0
  */
-public abstract class MemoryMappedElement {
+public abstract class MemoryMappedElement implements Serializable {
     /**
      * Size of element in bytes
      * @since 1.0
      */
-    protected static final int SIZE = -1;
+    protected static int SIZE = -1;
 
     /**
      * Convert this object into byte array.
@@ -28,7 +30,7 @@ public abstract class MemoryMappedElement {
      * @return size in number of bytes
      * @since 1.0
      */
-    public static final int getSize() {
+    public static int getSize() {
         return SIZE;
     }
 }

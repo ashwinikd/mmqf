@@ -1,9 +1,10 @@
-package com.ashwinikd.ds.mmqueue.impl;
+package com.ashwinikd.mmqueue.impl;
 
-import com.ashwinikd.ds.mmqueue.MemoryMappedElement;
-import com.ashwinikd.ds.mmqueue.MemoryMappedElementFactory;
-import com.ashwinikd.ds.mmqueue.MemoryMappedQueue;
-import com.ashwinikd.ds.mmqueue.file.MemoryMappedQueueFile;
+import com.ashwinikd.mmqueue.MemoryMappedElement;
+import com.ashwinikd.mmqueue.MemoryMappedElementFactory;
+import com.ashwinikd.mmqueue.MemoryMappedQueue;
+import com.ashwinikd.mmqueue.file.MemoryMappedFileException;
+import com.ashwinikd.mmqueue.file.MemoryMappedQueueFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,13 +21,14 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
     private int head;
     private int tail;
     private int size;
-    private int cursor;
+    private volatile int cursor;
     private final int initialHead;
     private final int initialTail;
     private final int capacity;
     private final int slotSize;
     private final MappedByteBuffer BUFFER;
     private final MemoryMappedElementFactory<T> elementFactory;
+    private AtomicInteger busyIterations;
 
     private static final int HEAD_POS = 0;
     private static final int HEAD_SIZ = 8;
@@ -35,17 +37,29 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
     private static final int SIZE_POS = 16;
     private static final int SIZE_SIZ = 8;
 
-    public MemoryMappedQueueImpl(MemoryMappedQueueFile file, MemoryMappedElementFactory<T> factory) throws IOException {
+    public MemoryMappedQueueImpl(MemoryMappedQueueFile file, MemoryMappedElementFactory<T> factory) throws IOException, MemoryMappedFileException {
         sequence = new AtomicInteger(0);
         BUFFER = file.getDataBuffer();
-        initialTail = readInt(TAIL_POS, TAIL_SIZ);
-        initialHead = readInt(HEAD_POS, HEAD_SIZ);
+        int t = readInt(TAIL_POS, TAIL_SIZ);
+        if(t == 0) {
+            t = 32;
+            writeLong(t, TAIL_POS, TAIL_SIZ);
+        }
+        int h = readInt(HEAD_POS, HEAD_SIZ);
+        if (h == 0) {
+            h = 32;
+            writeLong(h, HEAD_POS, HEAD_SIZ);
+        }
+        initialHead = h;
+        initialTail = t;
         head = initialHead;
         tail = initialTail;
+        cursor = sequence.get();
         size = readInt(SIZE_POS, SIZE_SIZ);
         capacity = file.getCapacity();
         slotSize = file.getSlotSize();
         elementFactory = factory;
+        busyIterations = new AtomicInteger();
     }
 
     private long readLong(int pos, int siz) {
@@ -62,13 +76,14 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
         ByteBuffer buffer = ByteBuffer.allocate(8);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putLong(n);
+        buffer.rewind();
         for (int i = 0; i < buffer.limit(); i++) {
             BUFFER.put(pos + i, buffer.get());
         }
     }
 
     private int readInt(int pos, int siz) {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
+        ByteBuffer buffer = ByteBuffer.allocate(siz);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         for (int i = 0; i < siz; i++) {
             buffer.put(BUFFER.get(pos + i));
@@ -78,12 +93,16 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
     }
 
     private void writeInt(int n, int pos, int siz) {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
+        ByteBuffer buffer = ByteBuffer.allocate(siz);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         buffer.putInt(n);
         for (int i = 0; i < buffer.limit(); i++) {
             BUFFER.put(pos + i, buffer.get());
         }
+    }
+
+    public int getBusyIterations() {
+        return busyIterations.get();
     }
 
     @Override
@@ -113,17 +132,36 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
     @Override
     public boolean enqueue(T e) throws IOException {
         int claimedSequence = sequence.incrementAndGet();
-        int position = 32 +  ((initialTail + slotSize * (claimedSequence - 1)) % (capacity*slotSize));
+        if ((size + claimedSequence - cursor) > capacity) {
+            sequence.decrementAndGet();
+            return false;
+        }
+        int position = 32 +  ((initialTail + slotSize * (claimedSequence - 1) - 32) % (capacity*slotSize));
         byte[] bytes = e.getBytes();
         for (int i = 0; i < bytes.length; i++) {
             BUFFER.put(i + position, bytes[i]);
         }
         int expectedSequence = claimedSequence - 1;
-        while(cursor != expectedSequence);
-        size++;
-        writeLong(size, SIZE_POS, SIZE_SIZ);
+        int i = 0;
+        while(cursor != expectedSequence) {
+//            i++;
+//            if ((i % 100) == 0) {
+//                System.out.println(claimedSequence + " waiting on cursor " + cursor);
+//            }
+//            try {
+//                Thread.sleep(0, 1);
+//            } catch (InterruptedException e1) {
+//                e1.printStackTrace();
+//            }
+        }
+        tail = 32 + ((position + slotSize - 32) % (capacity * slotSize));
+        writeLong(position + slotSize, TAIL_POS, TAIL_SIZ);
+        synchronized (this) {
+            size++;
+            writeLong(size, SIZE_POS, SIZE_SIZ);
+        }
         cursor = claimedSequence;
-        return false;
+        return true;
     }
 
     @Override
@@ -131,13 +169,17 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
         if (size == 0) {
             throw new NoSuchElementException();
         }
-        int position = head;
+        int position = 32 + ((head - 32) % (capacity * slotSize));
         byte[] bytes = new byte[slotSize];
         for (int i = 0; i < slotSize; i++) {
             bytes[i] = BUFFER.get(i + position);
         }
-        size --;
-        writeLong(size, SIZE_POS, SIZE_SIZ);
+        head = 32 + ((head + slotSize - 32) % (capacity * slotSize));
+        writeLong(head, HEAD_POS, HEAD_SIZ);
+        synchronized (this) {
+            size --;
+            writeLong(size, SIZE_POS, SIZE_SIZ);
+        }
         return elementFactory.fromBytes(bytes);
     }
 
@@ -152,5 +194,20 @@ public class MemoryMappedQueueImpl<T extends MemoryMappedElement> implements Mem
             bytes[i] = BUFFER.get(i + position);
         }
         return elementFactory.fromBytes(bytes);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[ ").append("MemoryMappedQueue").append("]\n\t").
+        append("initialHead=").append(initialHead).append("\n\t").
+        append("initialTail=").append(initialTail).append("\n\t").
+        append("sequence=").append(sequence.get()).append("\n\t").
+        append("head=").append(head).append("\n\t").
+        append("tail=").append(tail).append("\n\t").
+        append("size=").append(size).append("\n\t").
+        append("capacity=").append(capacity).append("\n\t").
+        append("slotSize=").append(slotSize);
+        return sb.toString();
     }
 }
