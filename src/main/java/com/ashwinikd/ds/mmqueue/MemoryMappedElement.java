@@ -1,4 +1,4 @@
-package com.ashwinikd.mmqueue;
+package com.ashwinikd.ds.mmqueue;
 
 import java.io.Serializable;
 

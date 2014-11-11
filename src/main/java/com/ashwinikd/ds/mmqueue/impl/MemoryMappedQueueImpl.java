@@ -1,10 +1,10 @@
-package com.ashwinikd.mmqueue.impl;
+package com.ashwinikd.ds.mmqueue.impl;
 
-import com.ashwinikd.mmqueue.MemoryMappedElement;
-import com.ashwinikd.mmqueue.MemoryMappedElementFactory;
-import com.ashwinikd.mmqueue.MemoryMappedQueue;
-import com.ashwinikd.mmqueue.file.MemoryMappedFileException;
-import com.ashwinikd.mmqueue.file.MemoryMappedQueueFile;
+import com.ashwinikd.ds.mmqueue.MemoryMappedElement;
+import com.ashwinikd.ds.mmqueue.MemoryMappedElementFactory;
+import com.ashwinikd.ds.mmqueue.MemoryMappedQueue;
+import com.ashwinikd.ds.mmqueue.file.MemoryMappedFileException;
+import com.ashwinikd.ds.mmqueue.file.MemoryMappedQueueFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

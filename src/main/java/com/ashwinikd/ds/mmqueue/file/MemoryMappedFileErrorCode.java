@@ -1,4 +1,4 @@
-package com.ashwinikd.mmqueue.file;
+package com.ashwinikd.ds.mmqueue.file;
 
 /**
  * Error codes for {@link MemoryMappedFileException}

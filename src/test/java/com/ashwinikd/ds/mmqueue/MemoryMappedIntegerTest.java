@@ -1,8 +1,8 @@
-package com.ashwinikd.mmqueue;
+package com.ashwinikd.ds.mmqueue;
 
-import com.ashwinikd.mmqueue.file.MemoryMappedFileException;
-import com.ashwinikd.mmqueue.file.MemoryMappedQueueFile;
-import com.ashwinikd.mmqueue.impl.MemoryMappedQueueImpl;
+import com.ashwinikd.ds.mmqueue.file.MemoryMappedFileException;
+import com.ashwinikd.ds.mmqueue.file.MemoryMappedQueueFile;
+import com.ashwinikd.ds.mmqueue.impl.MemoryMappedQueueImpl;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

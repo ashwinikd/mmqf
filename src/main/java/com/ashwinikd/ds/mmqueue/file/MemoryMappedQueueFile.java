@@ -1,4 +1,4 @@
-package com.ashwinikd.mmqueue.file;
+package com.ashwinikd.ds.mmqueue.file;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -7,7 +7,7 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
-import com.ashwinikd.mmqueue.MemoryMappedQueue;
+import com.ashwinikd.ds.mmqueue.MemoryMappedQueue;
 
 /**
  * Memory Mapped Queue File(MMQF).

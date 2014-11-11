@@ -1,4 +1,4 @@
-package com.ashwinikd.mmqueue;
+package com.ashwinikd.ds.mmqueue;
 
 /**
  * Created by ashwini on 10/11/14.

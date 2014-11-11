@@ -1,4 +1,4 @@
-package com.ashwinikd.mmqueue;
+package com.ashwinikd.ds.mmqueue;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
@@ -9,7 +9,7 @@ import java.util.NoSuchElementException;
  * @author Ashwini Dhekane[ashwini@ashwinidhekane.com]
  *
  * @see MemoryMappedElement
- * @see com.ashwinikd.mmqueue.file.MemoryMappedQueueFile
+ * @see com.ashwinikd.ds.mmqueue.file.MemoryMappedQueueFile
  *
  * @since 1.0
  */
