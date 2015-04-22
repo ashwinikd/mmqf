@@ -17,14 +17,14 @@ import java.util.concurrent.TimeUnit;
 
 public class MemoryMappedIntegerTest {
 
-    private static final int N = 10000;
+    private static final int N = 1000000;
     private static final int NUM_THREADS = 20;
     private static final int LOOP_COUNT = N / NUM_THREADS;
     private static MemoryMappedQueueImpl<MemoryMappedInteger> queue;
 
     public static void main(String[] args) {
-        //testConcurrent();
-        testSimple();
+        testConcurrent();
+        //testSimple();
     }
 
     private static  void testSleep() {
