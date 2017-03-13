@@ -14,8 +14,6 @@ import java.util.NoSuchElementException;
  * @since 1.0
  */
 public interface MemoryMappedQueue<T extends MemoryMappedElement> {
-
-
     /**
      * Get the number of elements in the queue.
      * @return size of the queue
